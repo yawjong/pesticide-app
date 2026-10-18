@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f6b3a">
+<meta name="description" content="查詢全台有效登記農藥的使用範圍、稀釋倍數與安全採收期">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="農藥查詢">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>農藥登記查詢</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a field-notebook tool. Sticky search bar, list of label-style product rows, detail opens as a full page with usage grouped by crop. */
+:root{
+  --bg:#f3f5ef; --surface:#ffffff; --ink:#1d2419; --muted:#5d6857; --line:#dde3d6;
+  --accent:#2f6b3a; --accent-soft:#e3eedf; --amber:#a35a00; --amber-soft:#fbefd9;
+  --danger:#a1332a; --danger-soft:#f8e3e0; --chip:#eef1ea;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141812; --surface:#1c2219; --ink:#e7ece2; --muted:#9aa594; --line:#2f382b;
+  --accent:#8cc98f; --accent-soft:#233322; --amber:#f0b45c; --amber-soft:#3a2c14;
+  --danger:#f08a7e; --danger-soft:#3a1d19; --chip:#252c22; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141812; --surface:#1c2219; --ink:#e7ece2; --muted:#9aa594; --line:#2f382b;
+  --accent:#8cc98f; --accent-soft:#233322; --amber:#f0b45c; --amber-soft:#3a2c14;
+  --danger:#f08a7e; --danger-soft:#3a1d19; --chip:#252c22; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.bar .wrap{padding-block:12px 10px;display:flex;flex-direction:column;gap:10px}
+.brandline{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brandline h1{margin:0;font-size:19px;font-weight:900;letter-spacing:.02em;text-wrap:balance}
+.brandline small{color:var(--muted);font-size:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--chip);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;padding:7px 8px;border-radius:8px;font-weight:500;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.inputs{display:flex;gap:8px}
+.inputs input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.inputs input:focus{border-color:var(--accent);outline:none}
+
+main .wrap{padding-block:14px 40px;display:flex;flex-direction:column;gap:14px}
+.meta{color:var(--muted);font-size:13px}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;width:100%}
+.row:first-child{border-top:0}
+.row:hover{background:var(--accent-soft)}
+.row .t{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.row .b{font-weight:700;font-size:16px}
+.row .c{color:var(--accent);font-weight:500}
+.row .s{color:var(--muted);font-size:13px}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--muted);letter-spacing:.03em;white-space:nowrap}
+.tag.code{font-family:var(--f-num)}
+.tag.warn{background:var(--amber-soft);color:var(--amber)}
+.tag.bad{background:var(--danger-soft);color:var(--danger)}
+.more{align-self:center;border:1px solid var(--line);background:var(--surface);padding:8px 18px;border-radius:999px;cursor:pointer}
+h2.sec{font-size:13px;letter-spacing:.08em;color:var(--muted);margin:6px 0 -4px;font-weight:700}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:18px;color:var(--muted)}
+.empty b{color:var(--ink)}
+.hints{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.hints button{border:1px solid var(--line);background:var(--bg);padding:5px 12px;border-radius:999px;cursor:pointer;font-size:14px}
+
+/* crop mode cards */
+.fcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fcard .h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fcard .h b{font-size:16px}
+.kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px}
+.kv span{color:var(--muted)}
+.kv em{font-style:normal;color:var(--ink);font-weight:500}
+.phi{color:var(--amber)!important;font-weight:700!important}
+.brands{display:flex;flex-wrap:wrap;gap:6px}
+.brands button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:14px}
+.brands button:hover{border-color:var(--accent)}
+
+/* detail */
+.back{border:0;background:transparent;color:var(--accent);font-weight:500;padding:0;cursor:pointer;align-self:flex-start}
+.dhead{display:flex;flex-direction:column;gap:6px}
+.dhead h2{margin:0;font-size:26px;font-weight:900;line-height:1.25;text-wrap:balance}
+.dhead .sub{font-size:16px;color:var(--accent);font-weight:500}
+.dhead .en{color:var(--muted);font-size:13px}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.facts div{background:var(--surface);padding:9px 12px;min-width:0}
+.facts dt{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.facts dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.note{font-size:13px;padding:10px 12px;border-radius:10px;background:var(--amber-soft);color:var(--amber)}
+.filter{display:flex;gap:8px;align-items:center}
+.filter input{flex:1;min-width:0;font:inherit;font-size:16px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.crop{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.crop>h3{margin:0;padding:9px 14px;font-size:15px;background:var(--accent-soft);color:var(--accent);display:flex;justify-content:space-between;gap:8px}
+.crop>h3 span{font-weight:400;font-size:12.5px;color:var(--muted)}
+.use{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.use:first-of-type{border-top:0}
+.use .p{font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--bg);border-radius:8px;padding:6px 8px;min-width:0}
+.stat dt{font-size:11.5px;color:var(--muted)}
+.stat dd{margin:0;font-family:var(--f-num);font-size:14.5px;overflow-wrap:anywhere}
+.stat.hl{background:var(--amber-soft)}
+.stat.hl dd{color:var(--amber);font-weight:700}
+.extra{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.extra b{color:var(--ink);font-weight:500}
+footer{color:var(--muted);font-size:12px;line-height:1.6;padding-top:6px}
+.loading{padding:30px 0;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:no-preference){.row,.brands button{transition:background .12s,border-color .12s}}
+</style>
+
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <div class="brandline"><h1>農藥登記查詢</h1><small id="count">載入資料中…</small></div>
+    <div class="seg" role="group" aria-label="查詢方式">
+      <button id="m-prod" aria-pressed="true">商品名・普通名</button>
+      <button id="m-crop" aria-pressed="false">作物・病蟲害</button>
+    </div>
+    <div class="inputs" id="in-prod">
+      <input id="q" type="search" placeholder="輸入商品名、普通名、英文名、廠商或許可證號" autocomplete="off">
+    </div>
+    <div class="inputs" id="in-crop" hidden>
+      <input id="qc" type="search" placeholder="作物，如 番茄" autocomplete="off">
+      <input id="qp" type="search" placeholder="病蟲害，如 疫病" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<main><div class="wrap" id="view"><div class="loading">正在載入全台登記農藥資料…</div></div></main>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const view=$('#view');
+let D=null, prodIdx=[], revIdx=[], mode='prod', lastScroll=0, pageN=60;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s||'').toLowerCase().replace(/[\s\-－・·()（）]/g,'');
+const P=i=>D.products[i];
+const today=new Date(); const rocToday=(today.getFullYear()-1911)*10000+(today.getMonth()+1)*100+today.getDate();
+function expired(s){const m=/^(\d{3})\/(\d{2})\/(\d{2})$/.exec(s||'');if(!m)return false;return (+m[1])*10000+(+m[2])*100+(+m[3])<rocToday}
+function resTags(p){const t=[];if(p[11])t.push('IRAC '+p[11]);if(p[12])t.push('FRAC '+p[12]);if(p[13])t.push('HRAC '+p[13]);return t}
+
+fetch('data.json').then(r=>r.json()).then(d=>{
+  D=d;
+  prodIdx=D.products.map(p=>norm([p[1],p[2],p[3],p[7],p[0],p[16]].join('|')));
+  revIdx=D.revoked.map(r=>norm([r[1],r[2],r[5],r[0]].join('|')));
+  $('#count').textContent=`${D.products.length.toLocaleString()} 項有效登記`;
+  render();
+}).catch(()=>{view.innerHTML='<div class="empty"><b>資料載入失敗。</b>請重新整理頁面再試一次。</div>'});
+
+function setMode(m){mode=m;$('#m-prod').setAttribute('aria-pressed',m==='prod');$('#m-crop').setAttribute('aria-pressed',m==='crop');
+  $('#in-prod').hidden=m!=='prod';$('#in-crop').hidden=m!=='crop';pageN=60;render();}
+$('#m-prod').onclick=()=>setMode('prod');$('#m-crop').onclick=()=>setMode('crop');
+let tmr;const deb=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{pageN=60;render()},150)};
+['#q','#qc','#qp'].forEach(s=>$(s).addEventListener('input',deb));
+
+function render(){ if(!D) return; mode==='prod'?renderProd():renderCrop(); }
+
+function hintHTML(list,target){return `<div class="hints">${list.map(h=>`<button data-h="${esc(h)}" data-t="${target}">${esc(h)}</button>`).join('')}</div>`}
+function bindHints(){view.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
+  const t=b.dataset.t;if(t==='q'){$('#q').value=b.dataset.h}else{const [c,p]=b.dataset.h.split(' ');$('#qc').value=c;$('#qp').value=p||''}pageN=60;render();})}
+
+function prodRow(i){const p=P(i);const tags=[p[9],...resTags(p)].filter(Boolean);
+  return `<button class="row" data-i="${i}"><span class="t"><span class="b">${esc(p[1]||p[2])}</span><span class="c">${esc(p[2])} <span class="num">${esc(p[5])}</span> ${esc(p[4])}</span></span>
+  <span class="s">${esc(p[7])}・<span class="num">${esc(p[0])}</span></span>
+  <span class="t">${tags.map(t=>`<span class="tag ${/RAC/.test(t)?'code':''}">${esc(t)}</span>`).join('')}${expired(p[6])?'<span class="tag warn">許可證已過期限</span>':''}</span></button>`}
+
+function renderProd(){
+  const q=norm($('#q').value);
+  if(!q){view.innerHTML=`<div class="empty"><b>輸入商品名就能查</b>登記作物、病蟲害、稀釋倍數和安全採收期。也可以輸入普通名找出所有同成分的商品，或輸入廠商名稱列出它的全部產品。${hintHTML(['芬化利','亞托敏','益達胺','百克敏','嘉磷塞'],'q')}</div>${footer()}`;bindHints();return}
+  let hits=[];prodIdx.forEach((s,i)=>{if(s.includes(q))hits.push(i)});
+  const score=i=>{const p=P(i);const b=norm(p[1]),c=norm(p[2]);return (b===q?0:c===q?1:b.startsWith(q)?2:c.startsWith(q)?3:4)};
+  hits.sort((a,b)=>score(a)-score(b)||P(a)[2].localeCompare(P(b)[2],'zh-Hant')||P(a)[1].localeCompare(P(b)[1],'zh-Hant'));
+  const rev=[];revIdx.forEach((s,i)=>{if(s.includes(q))rev.push(i)});
+  let h=`<div class="meta">找到 ${hits.length.toLocaleString()} 項有效登記商品${rev.length?`，另有 ${rev.length} 張已撤銷許可證`:''}</div>`;
+  if(hits.length){h+=`<div class="list">${hits.slice(0,pageN).map(prodRow).join('')}</div>`;
+    if(hits.length>pageN)h+=`<button class="more" id="more">再顯示 ${Math.min(60,hits.length-pageN)} 項</button>`}
+  else h+=`<div class="empty">沒有找到符合「${esc($('#q').value)}」的有效登記商品。可以試試普通名、較短的關鍵字，或改用作物・病蟲害查詢。</div>`;
+  if(rev.length){h+=`<h2 class="sec">已撤銷許可證</h2><div class="list">${rev.slice(0,30).map(i=>{const r=D.revoked[i];
+    return `<div class="row" style="cursor:default"><span class="t"><span class="b">${esc(r[1]||r[2])}</span><span class="c">${esc(r[2])} <span class="num">${esc(r[4])}</span> ${esc(r[3])}</span></span>
+    <span class="s">${esc(r[5])}・<span class="num">${esc(r[0])}</span></span><span class="t"><span class="tag bad">${esc(r[6])} <span class="num">${esc(r[7])}</span></span></span></div>`}).join('')}</div>`}
+  view.innerHTML=h+footer();bindRows();const m=$('#more');if(m)m.onclick=()=>{pageN+=60;renderProd()};
+}
+
+function renderCrop(){
+  const qc=norm($('#qc').value),qp=norm($('#qp').value);
+  if(!qc&&!qp){view.innerHTML=`<div class="empty"><b>依作物和病蟲害找藥</b>輸入作物、病蟲害，或兩個一起輸入，列出有登記的成分劑型、稀釋倍數、安全採收期和對應商品。${hintHTML(['番茄 疫病','水稻 稻熱病','柑桔 薊馬','甘藍 小菜蛾','梨 黑星病'],'c')}</div>${footer()}`;bindHints();return}
+  // usage idx -> matching rows
+  const byUse=new Map();
+  D.uses.forEach((tbl,u)=>{tbl.forEach(r=>{if((!qc||norm(r[0]).includes(qc))&&(!qp||norm(r[1]).includes(qp))){if(!byUse.has(u))byUse.set(u,[]);byUse.get(u).push(r)}})});
+  // group products by usage idx
+  const groups=new Map();
+  D.products.forEach((p,i)=>{if(p[14]>=0&&byUse.has(p[14])){const k=p[14]+'|'+p[2]+'|'+p[5]+'|'+p[4];if(!groups.has(k))groups.set(k,{u:p[14],items:[]});groups.get(k).items.push(i)}});
+  const arr=[...groups.values()].sort((a,b)=>P(a.items[0])[2].localeCompare(P(b.items[0])[2],'zh-Hant'));
+  let h=`<div class="meta">${arr.length} 種成分劑型有登記${qc?'「'+esc($('#qc').value)+'」':''}${qp?'「'+esc($('#qp').value)+'」':''}</div>`;
+  if(!arr.length)h+=`<div class="empty">沒有找到登記紀錄。作物名稱常以類別登記（如「十字花科小葉菜類」「瓜果類」），可以試試較短的字，例如「葉菜」或「瓜」。</div>`;
+  arr.slice(0,pageN).forEach(g=>{const p=P(g.items[0]);const rows=byUse.get(g.u);
+    h+=`<div class="fcard"><div class="h"><b>${esc(p[2])}</b><span class="num">${esc(p[5])}</span><span>${esc(p[4])}</span>${resTags(p).map(t=>`<span class="tag code">${esc(t)}</span>`).join('')}</div>
+    ${rows.slice(0,6).map(r=>`<div class="kv"><em>${esc(r[0])}・${esc(r[1])}</em>${r[2]?`<span>稀釋 <em class="num">${esc(r[2])}</em> 倍</span>`:''}<span>採收前 <em class="num phi">${esc(r[6]||'—')}</em></span>${r[5]?`<span>間隔 <em>${esc(r[5])}</em></span>`:''}</div>`).join('')}
+    ${rows.length>6?`<div class="meta">另有 ${rows.length-6} 項符合，點商品看全部</div>`:''}
+    <div class="brands">${g.items.slice(0,40).map(i=>`<button data-i="${i}">${esc(P(i)[1]||P(i)[2])}<span class="meta">・${esc(P(i)[7].replace(/股份有限公司|有限公司/,''))}</span></button>`).join('')}${g.items.length>40?`<span class="meta">等 ${g.items.length} 項商品</span>`:''}</div></div>`});
+  if(arr.length>pageN)h+=`<button class="more" id="more">再顯示 ${Math.min(60,arr.length-pageN)} 種</button>`;
+  view.innerHTML=h+footer();bindRows();const m=$('#more');if(m)m.onclick=()=>{pageN+=60;renderCrop()};
+}
+
+function bindRows(){view.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{lastScroll=window.scrollY;showDetail(+b.dataset.i)})}
+
+function showDetail(i){
+  const p=P(i);const tbl=p[14]>=0?D.uses[p[14]]:[];
+  const facts=[['許可證',`<span class="num">${esc(p[0])}</span>`],['有效期限',`<span class="num">${esc(p[6])}</span>${expired(p[6])?' <span class="tag warn">已過期限</span>':''}`],
+    ['登記廠商',esc(p[7])],['國外原製造廠',esc(p[8]||'—')],['農藥分類',esc(p[9]||'—')],['化學類別',esc(p[10]||'—')],
+    ['抗藥性分類',resTags(p).map(t=>`<span class="num">${esc(t)}</span>`).join('、')||'—'],['農藥代號',`<span class="num">${esc(p[16])}</span>`]];
+  const same=D.products.map((q,j)=>j).filter(j=>j!==i&&P(j)[16]===p[16]&&P(j)[4]===p[4]&&P(j)[5]===p[5]);
+  const other=[...new Map(D.products.map((q,j)=>[j,q]).filter(([j,q])=>q[16]===p[16]&&!(q[4]===p[4]&&q[5]===p[5])).map(([j,q])=>[q[5]+q[4],j])).values()];
+  let h=`<button class="back" id="back">← 回到搜尋結果</button>
+  <div class="dhead"><h2>${esc(p[1]||p[2])}</h2><div class="sub">${esc(p[2])} <span class="num">${esc(p[5])}</span> ${esc(p[4])}</div>${p[3]?`<div class="en">${esc(p[3])}</div>`:''}</div>
+  <dl class="facts">${facts.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+  if(p[15])h+=`<div class="note">這張許可證的使用範圍尚未單獨下載，暫以同成分、同劑型、同含量的登記內容顯示。請以產品標示為準。</div>`;
+  h+=`<h2 class="sec">登記使用範圍・${tbl.length} 項</h2>`;
+  if(!tbl.length)h+=`<div class="empty">目前沒有這項商品的使用範圍資料。</div>`;
+  else{h+=`<div class="filter"><input id="uf" type="search" placeholder="篩選作物或病蟲害" autocomplete="off"></div><div id="ulist"></div>`}
+  if(same.length)h+=`<h2 class="sec">同成分同劑型的其他商品・${same.length} 項</h2><div class="list">${same.slice(0,50).map(prodRow).join('')}</div>`;
+  if(other.length)h+=`<h2 class="sec">${esc(p[2])}的其他劑型・含量</h2><div class="list">${other.map(prodRow).join('')}</div>`;
+  view.innerHTML=h+footer();window.scrollTo(0,0);
+  $('#back').onclick=()=>{render();window.scrollTo(0,lastScroll)};
+  bindRows();
+  if(tbl.length){const draw=()=>{const f=norm($('#uf').value);const rows=tbl.filter(r=>!f||norm(r[0]+r[1]).includes(f));
+    const g=new Map();rows.forEach(r=>{if(!g.has(r[0]))g.set(r[0],[]);g.get(r[0]).push(r)});
+    $('#ulist').innerHTML=rows.length?[...g].map(([crop,rs])=>`<section class="crop" style="margin-top:10px"><h3>${esc(crop)}<span>${rs.length} 項</span></h3>${rs.map(useHTML).join('')}</section>`).join(''):'<div class="empty" style="margin-top:10px">沒有符合的作物或病蟲害。</div>'};
+    $('#uf').addEventListener('input',draw);draw();}
+}
+function useHTML(r){
+  const ex=[['每公頃用量',r[3]],['使用時期',r[4]],['施藥方法',r[8]],['備註',r[9]]].filter(x=>x[1]);
+  return `<div class="use"><div class="p">${esc(r[1])}</div>
+  <dl class="stats"><div class="stat"><dt>稀釋倍數</dt><dd>${r[2]?esc(r[2])+' 倍':'—'}</dd></div><div class="stat hl"><dt>安全採收期</dt><dd>${esc(r[6]||'—')}</dd></div><div class="stat"><dt>施藥間隔・次數</dt><dd>${esc(r[5]||'—')}${r[7]?' / '+esc(r[7]):''}</dd></div></dl>
+  ${ex.length?`<div class="extra">${ex.map(([k,v])=>`<div><b>${k}</b>　${esc(v)}</div>`).join('')}</div>`:''}</div>`}
+function footer(){return `<footer>資料來源：農業部動植物防疫檢疫署農藥資訊服務網開放資料，整理於 ${esc(D?D.updated:'')}。僅收錄有效的成品農藥許可證。施藥請依產品標示及官方公告的使用方法及範圍。</footer>`}
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

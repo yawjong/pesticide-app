@@ -1,0 +1,32 @@
+name: 每週更新農藥資料
+
+on:
+  schedule:
+    - cron: '0 18 * * 0'   # 每週一 02:00（台灣時間）
+  workflow_dispatch:        # 也可以在 Actions 頁面手動執行
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 下載許可證資料
+        run: python3 scripts/fetch_lic.py work/lic_all.json
+      - name: 下載使用範圍
+        run: python3 scripts/fetch_use.py work/lic_all.json work/use 4
+      - name: 產生 data.json
+        run: python3 scripts/build_data.py work/lic_all.json work/use data.json
+      - name: 提交更新
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "更新農藥資料 $(date +%F)"
+          git push
