@@ -166,7 +166,7 @@ const ALIAS={
  '茶葉':['茶','山茶科茶類'],'茶樹':['茶','山茶科茶類'],'茶':['山茶科茶類'],'菊花':['菊'],'馬鈴薯':['茄科根菜類'],'紅蘿蔔':['胡蘿蔔'],'芋頭':['芋']
 };
 // 搜尋紀錄：停止打字 2 秒後送出一筆（GoatCounter，不用 cookie）。GC_CODE 留空就不記錄。
-const GC_CODE='';
+const GC_CODE='chayao';
 let logT,lastLog='';
 function logSearch(kind,q,n){if(!GC_CODE||!q)return;clearTimeout(logT);logT=setTimeout(()=>{const k=kind+'|'+q;if(k===lastLog)return;lastLog=k;
   try{fetch(`https://${GC_CODE}.goatcounter.com/count?p=${encodeURIComponent((n?'/查詢/':'/查無結果/')+kind+'/'+q)}&t=${encodeURIComponent(n+' 筆')}&e=true&rnd=${Math.random()}`,{mode:'no-cors',keepalive:true}).catch(()=>{})}catch(e){}},2000)}
@@ -277,6 +277,7 @@ function footer(){return `<footer>資料來源：農業部動植物防疫檢疫�
 })();
 </script>
 
+<script data-goatcounter="https://chayao.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="install.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
