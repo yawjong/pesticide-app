@@ -148,6 +148,28 @@ let D=null, prodIdx=[], revIdx=[], mode='prod', lastScroll=0, pageN=60;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>String(s||'').toLowerCase().replace(/[\s\-－・·()（）]/g,'');
 const P=i=>D.products[i];
+// 常用作物俗名 → 登記使用的作物名稱或作物類別
+const ALIAS={
+ '高麗菜':['甘藍','十字花科包葉菜類'],'甘藍':['十字花科包葉菜類'],'包心白菜':['結球白菜','十字花科包葉菜類'],'大白菜':['結球白菜','十字花科包葉菜類'],'結球白菜':['十字花科包葉菜類'],
+ '花椰菜':['十字花科包葉菜類'],'青花菜':['十字花科包葉菜類'],'綠花椰':['十字花科包葉菜類'],
+ '小白菜':['十字花科小葉菜類'],'青江菜':['十字花科小葉菜類'],'芥藍':['十字花科小葉菜類'],'油菜':['十字花科小葉菜類'],'芥菜':['十字花科小葉菜類'],
+ '蘿蔔':['十字花科根菜類'],'白蘿蔔':['蘿蔔','十字花科根菜類'],'蕪菁':['十字花科根菜類'],
+ '芒果':['檬果'],'柑橘':['柑桔','柑桔類'],'柑桔':['柑桔類'],'橘子':['柑桔','柑桔類'],'柳丁':['柑桔','柑桔類'],'椪柑':['柑桔','柑桔類'],'文旦':['柑桔','柑桔類'],
+ '小黃瓜':['胡瓜','瓜菜類'],'黃瓜':['胡瓜','瓜菜類'],'胡瓜':['瓜菜類'],'苦瓜':['瓜菜類'],'絲瓜':['瓜菜類'],'南瓜':['瓜菜類'],'冬瓜':['瓜菜類'],'越瓜':['瓜菜類'],'隼人瓜':['瓜菜類'],'佛手瓜':['隼人瓜','瓜菜類'],'扁蒲':['瓜菜類'],'葫蘆':['扁蒲','瓜菜類'],
+ '西瓜':['瓜果類'],'香瓜':['瓜果類'],'洋香瓜':['瓜果類'],'哈密瓜':['洋香瓜','瓜果類'],
+ '番茄':['茄科果菜類'],'小番茄':['番茄','茄科果菜類'],'甜椒':['茄科果菜類'],'青椒':['甜椒','茄科果菜類'],'辣椒':['茄科果菜類'],'茄子':['茄科果菜類'],
+ '空心菜':['蕹菜','旋花科小葉菜類'],'蕹菜':['旋花科小葉菜類'],'地瓜':['甘藷'],'番薯':['甘藷'],'花生':['落花生'],'玉蜀黍':['玉米'],'稻':['水稻'],'稻米':['水稻'],
+ '芭樂':['番石榴'],'釋迦':['番荔枝'],'火龍果':['紅龍果'],'奇異果':['獼猴桃'],'梨':['薔薇科梨果類','梨果類'],'蘋果':['薔薇科梨果類','梨果類'],'枇杷':['薔薇科梨果類'],'棗':['鼠李科梨果類'],'蜜棗':['印度棗','鼠李科梨果類'],
+ '蔥':['蔥科小葉菜類'],'青蔥':['蔥','蔥科小葉菜類'],'韭菜':['韭','蔥科小葉菜類'],'洋蔥':['蔥科根菜類'],'大蒜':['蒜','蔥科根菜類'],'蒜':['蔥科根菜類'],
+ '萵苣':['結球萵苣','不結球萵苣與半結球萵苣','菊科包葉菜類','菊科小葉菜類'],'A菜':['不結球萵苣與半結球萵苣','菊科小葉菜類'],'茼蒿':['菊科小葉菜類'],
+ '毛豆':['大豆'],'四季豆':['菜豆','豆菜類'],'敏豆':['菜豆','豆菜類'],'豌豆':['豆菜類'],'豇豆':['豆菜類'],'菜豆':['豆菜類'],
+ '茶葉':['茶','山茶科茶類'],'茶樹':['茶','山茶科茶類'],'茶':['山茶科茶類'],'菊花':['菊'],'馬鈴薯':['茄科根菜類'],'紅蘿蔔':['胡蘿蔔'],'芋頭':['芋']
+};
+// 搜尋紀錄：停止打字 2 秒後送出一筆（GoatCounter，不用 cookie）。GC_CODE 留空就不記錄。
+const GC_CODE='chayao';
+let logT,lastLog='';
+function logSearch(kind,q,n){if(!GC_CODE||!q)return;clearTimeout(logT);logT=setTimeout(()=>{const k=kind+'|'+q;if(k===lastLog)return;lastLog=k;
+  try{fetch(`https://${GC_CODE}.goatcounter.com/count?p=${encodeURIComponent((n?'/查詢/':'/查無結果/')+kind+'/'+q)}&t=${encodeURIComponent(n+' 筆')}&e=true&rnd=${Math.random()}`,{mode:'no-cors',keepalive:true}).catch(()=>{})}catch(e){}},2000)}
 const today=new Date(); const rocToday=(today.getFullYear()-1911)*10000+(today.getMonth()+1)*100+today.getDate();
 function expired(s){const m=/^(\d{3})\/(\d{2})\/(\d{2})$/.exec(s||'');if(!m)return false;return (+m[1])*10000+(+m[2])*100+(+m[3])<rocToday}
 function resTags(p){const t=[];if(p[11])t.push('IRAC '+p[11]);if(p[12])t.push('FRAC '+p[12]);if(p[13])t.push('HRAC '+p[13]);return t}
@@ -184,6 +206,7 @@ function renderProd(){
   const score=i=>{const p=P(i);const b=norm(p[1]),c=norm(p[2]);return (b===q?0:c===q?1:b.startsWith(q)?2:c.startsWith(q)?3:4)};
   hits.sort((a,b)=>score(a)-score(b)||P(a)[2].localeCompare(P(b)[2],'zh-Hant')||P(a)[1].localeCompare(P(b)[1],'zh-Hant'));
   const rev=[];revIdx.forEach((s,i)=>{if(s.includes(q))rev.push(i)});
+  logSearch('藥名',$('#q').value.trim(),hits.length);
   let h=`<div class="meta">找到 ${hits.length.toLocaleString()} 項有效登記商品${rev.length?`，另有 ${rev.length} 張已撤銷許可證`:''}</div>`;
   if(hits.length){h+=`<div class="list">${hits.slice(0,pageN).map(prodRow).join('')}</div>`;
     if(hits.length>pageN)h+=`<button class="more" id="more">再顯示 ${Math.min(60,hits.length-pageN)} 項</button>`}
@@ -199,11 +222,15 @@ function renderCrop(){
   if(!qc&&!qp){view.innerHTML=`<div class="empty"><b>依作物和病蟲害找藥</b>輸入作物、病蟲害，或兩個一起輸入，列出有登記的成分劑型、稀釋倍數、安全採收期和對應商品。${hintHTML(['番茄 疫病','水稻 稻熱病','柑桔 薊馬','甘藍 小菜蛾','梨 黑星病'],'c')}</div>${footer()}`;bindHints();return}
   // usage idx -> matching rows
   const byUse=new Map();
-  D.uses.forEach((tbl,u)=>{tbl.forEach(r=>{if((!qc||norm(r[0]).includes(qc))&&(!qp||norm(r[1]).includes(qp))){if(!byUse.has(u))byUse.set(u,[]);byUse.get(u).push(r)}})});
+  // 俗名對照：同時找登記上的作物名稱與作物類別
+  const alias=(ALIAS[$('#qc').value.trim()]||[]).map(norm);
+  const cropOK=c=>{const n=norm(c);return n.includes(qc)||alias.includes(n)};
+  D.uses.forEach((tbl,u)=>{tbl.forEach(r=>{if((!qc||cropOK(r[0]))&&(!qp||norm(r[1]).includes(qp))){if(!byUse.has(u))byUse.set(u,[]);byUse.get(u).push(r)}})});
   // group products by usage idx
   const groups=new Map();
   D.products.forEach((p,i)=>{if(p[14]>=0&&byUse.has(p[14])){const k=p[14]+'|'+p[2]+'|'+p[5]+'|'+p[4];if(!groups.has(k))groups.set(k,{u:p[14],items:[]});groups.get(k).items.push(i)}});
   const arr=[...groups.values()].sort((a,b)=>P(a.items[0])[2].localeCompare(P(b.items[0])[2],'zh-Hant'));
+  logSearch('作物',[$('#qc').value.trim(),$('#qp').value.trim()].filter(Boolean).join('＋'),arr.length);
   let h=`<div class="meta">${arr.length} 種成分劑型有登記${qc?'「'+esc($('#qc').value)+'」':''}${qp?'「'+esc($('#qp').value)+'」':''}</div>`;
   if(!arr.length)h+=`<div class="empty">沒有找到登記紀錄。作物名稱常以類別登記（如「十字花科小葉菜類」「瓜果類」），可以試試較短的字，例如「葉菜」或「瓜」。</div>`;
   arr.slice(0,pageN).forEach(g=>{const p=P(g.items[0]);const rows=byUse.get(g.u);
@@ -250,6 +277,7 @@ function footer(){return `<footer>資料來源：農業部動植物防疫檢疫�
 })();
 </script>
 
+<script data-goatcounter="https://chayao.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="install.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

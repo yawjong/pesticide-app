@@ -1,5 +1,5 @@
 // 離線快取：App 本體先用快取，資料檔每次背景更新
-const CACHE = 'pesticide-v2';
+const CACHE = 'pesticide-v3';
 const SHELL = ['./', 'index.html', 'install.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
