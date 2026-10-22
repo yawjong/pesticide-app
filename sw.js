@@ -1,6 +1,6 @@
 // 離線快取：App 本體先用快取，資料檔每次背景更新
-const CACHE = 'pesticide-v1';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'pesticide-v2';
+const SHELL = ['./', 'index.html', 'install.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
